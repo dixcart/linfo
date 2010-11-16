@@ -1,4 +1,4 @@
-This implements a CUPS printer queue status parser.
+This implements a truecrypt mounted volume status shower
 
 Installation: 
  - Copy/move the class.ext.truecrypt.php into the lib/ folder

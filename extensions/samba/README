@@ -1,0 +1,8 @@
+This impliments a current samba usage status 
+
+Installation: 
+ - The following lines must be added to your config.inc.php:
+   $settings['extensions']['smb'] = true; 
+
+ - Copy/move the class.ext.smb.php into the lib/ folder
+

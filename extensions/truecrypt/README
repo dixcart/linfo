@@ -1,0 +1,8 @@
+This implements a CUPS printer queue status parser.
+
+Installation: 
+ - Copy/move the class.ext.truecrypt.php into the lib/ folder
+ - The following lines must be added to your config.inc.php:
+   $settings['extensions']['truecrypt'] = true; 
+
+

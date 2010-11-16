@@ -1,0 +1,14 @@
+This impliments a soldat (soldat.pl) dedicated server gamestat.txt parser
+
+Installation: 
+ - Copy/move the class.ext.soldat.php into the lib/ folder
+ - The following lines must be added to your config.inc.php:
+   $settings['extensions']['soldat'] = true;  
+
+   // paths to the gamestat.txt files
+   $settings['soldat_servers'] = array(
+	//'CTF #1' => '/home/soldat/ctf/logs/gamestat.txt' # example usage
+   );
+
+
+

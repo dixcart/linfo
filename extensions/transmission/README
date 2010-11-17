@@ -6,11 +6,11 @@ Installation:
  - The following lines must be added to your config.inc.php:
    $settings['extensions']['transmission'] = true; 
    $settings['transmission_auth'] = array(
-   	// false			# for no auth needed OR:
-	// 'username', 'password'	# For when authentication is required
+	//'user' => 'jim', # Both of these must exist if you wish to use auth
+	//'pass' => 'pwnz!'
    );
-   $settings['transmission_server'] = array(
-   	'server' => 'localhost',
-	'port' => 9091
+   $settings['transmission_host'] = array(
+   	// 'server' => 'localhost',	# uncomment to set a specific host
+	// 'port' => 9091		# uncomment to set a specific port
    ); 
 

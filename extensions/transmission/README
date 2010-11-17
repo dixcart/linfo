@@ -1,0 +1,16 @@
+This implements a transmission-remote parsing extension which displays status of running torrents
+
+
+Installation: 
+ - Copy/move the class.ext.transmission.php into the lib/ folder
+ - The following lines must be added to your config.inc.php:
+   $settings['extensions']['transmission'] = true; 
+   $settings['transmission_auth'] = array(
+   	// false			# for no auth needed OR:
+	// 'username', 'password'	# For when authentication is required
+   );
+   $settings['transmission_server'] = array(
+   	'server' => 'localhost',
+	'port' => 9091
+   ); 
+

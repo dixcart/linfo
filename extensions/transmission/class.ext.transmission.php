@@ -1,6 +1,6 @@
 <?php
 
-/*
+/**
  * This file is part of Linfo (c) 2010 Joseph Gillotti.
  * 
  * Linfo is free software: you can redistribute it and/or modify
@@ -15,12 +15,14 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with Linfo.  If not, see <http://www.gnu.org/licenses/>.
- * 
-*/
+ */
 
-defined('IN_INFO') or exit; 
+/**
+ * Keep out hackers...
+ */
+defined('IN_INFO') or exit;
 
-/*
+/**
  * Get status on transmission torrents
  */
 class ext_transmission implements LinfoExtension {
@@ -34,7 +36,11 @@ class ext_transmission implements LinfoExtension {
 		$_auth,
 		$_host;
 
-	// localize important stuff
+	/**
+	 * localize important stuff
+	 * 
+	 * @access public
+	 */
 	public function __construct() {
 		global $settings;
 
@@ -48,7 +54,11 @@ class ext_transmission implements LinfoExtension {
 		$this->_host = array_key_exists('transmission_host', $settings) ? (array) $settings['transmission_host'] : array();
 	}
 
-	// Deal with it
+	/**
+	 * Deal with it
+	 * 
+	 * @access private
+	 */
 	private function _call () {
 		// Time this
 		$t = new LinfoTimerStart('Transmission extension');
@@ -98,12 +108,12 @@ class ext_transmission implements LinfoExtension {
 		}
 
 		// Match teh torrents!
-		if (preg_match_all('/^\s+(\d+)\*?\s+(\d+)\%\s+(\d+\.\d+ \w+|None)\s+(\w+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\w+)\s+(.+)$/m', $result, $matches, PREG_SET_ORDER) > 0) {
+		if (preg_match_all('/^\s+(\d+)\*?\s+(\d+)\%\s+(\d+\.\d+ \w+|None)\s+(\w+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+|None)\s+(\w+)\s+(.+)$/m', $result, $matches, PREG_SET_ORDER) > 0) {
 			foreach ($matches as $m) {
 				$this->_torrents[] = array(
 					'id' => $m[1],
-					'done' => $m[2],
-					'have' => $m[3],
+					'done' => $m[2], 
+					'have' => $m[3], 
 					'eta' => $m[4],
 					'up' => $m[5],
 					'down' => $m[6],
@@ -115,10 +125,21 @@ class ext_transmission implements LinfoExtension {
 		}
 	}
 	
+	/**
+	 * Do the job
+	 * 
+	 * @access public
+	 */
 	public function work() {
 		$this->_call();
 	}
 
+	/**
+	 * Return result
+	 * 
+	 * @access public
+	 * @return false on failure|array of the torrents
+	 */
 	public function result() {
 		// Don't bother if it didn't go well
 		if ($this->_res === false) {
@@ -137,6 +158,7 @@ class ext_transmission implements LinfoExtension {
 				array(1, 'Done', '10%'),
 				'State',
 				'Have',
+				'Uploaded',
 				'Time Left',
 				'Ratio',
 				'Up/Down Speed'
@@ -148,12 +170,59 @@ class ext_transmission implements LinfoExtension {
 			$rows[] = array(
 				'type' => 'none',
 				'columns' => array(
-					array(7, 'None found')
+					array(8, 'None found')
 				)
 			);
 		}
 		else {
+			
+			// Store a total amount of certain torrents here:
+			$status_tally = array();
+
+			// As well as uploaded/downloaded
+			$status_tally['Downloaded'] = 0;
+			$status_tally['Uploaded'] = 0;
+
+			// Go through each torrent
 			foreach ($this->_torrents as $torrent) {
+			
+				// Status count tally
+				$status_tally[$torrent['state']] = !array_key_exists($torrent['state'], $status_tally) ? 1 : $status_tally[$torrent['state']] + 1;
+
+				// Make some sense of the have so we can get it in real units
+				$have_bytes = false;
+				if ($torrent['have'] != 'None') {
+					$have_parts = explode(' ', $torrent['have'], 2);
+					if (is_numeric($have_parts[0]) && $have_parts[0] > 0) {
+						switch ($have_parts[1]) {
+							case 'TiB':
+								$have_bytes = (float) $have_parts[0] * 1099511627776;
+							break;
+							case 'GiB':
+								$have_bytes = (float) $have_parts[0] * 1073741824;
+							break;
+							case 'MiB':
+								$have_bytes = (float) $have_parts[0] * 1048576;
+							break;
+							case 'KiB':
+								$have_bytes = (float) $have_parts[0] * 1024;
+							break;
+						}
+					}
+				}
+
+				// Try getting amount uploaded, based upon ratio and exact amount downloaded above
+				$uploaded_bytes = false;
+				if (is_numeric($have_bytes) && $have_bytes > 0 && is_numeric($torrent['ratio']) && $torrent['ratio'] > 0) 
+					$uploaded_bytes = $torrent['ratio'] * $have_bytes;
+				
+				// Save amount uploaded/downloaded tally
+				if (is_numeric($have_bytes) && $have_bytes > 0 && is_numeric($uploaded_bytes) && $uploaded_bytes > 0) {
+					$status_tally['Downloaded'] += $have_bytes;
+					$status_tally['Uploaded'] += $uploaded_bytes;
+				}
+				
+				// Save result
 				$rows[] = array(
 					'type' => 'values',
 					'columns' => array (
@@ -167,10 +236,34 @@ class ext_transmission implements LinfoExtension {
 						</div>
 						',
 						$torrent['state'],
-						$torrent['have'],
+						$have_bytes !== false ? byte_convert($have_bytes) : $torrent['have'],
+						$uploaded_bytes !== false ? byte_convert($uploaded_bytes) : 'None',
 						$torrent['eta'],
 						$torrent['ratio'],
 						$torrent['up'] . ' / '. $torrent['down'],
+					)
+				);
+			}
+
+			// Finish the size totals
+			$status_tally['Downloaded'] = $status_tally['Downloaded'] > 0 ? byte_convert($status_tally['Downloaded']) : 'None';
+			$status_tally['Uploaded'] = $status_tally['Uploaded'] > 0 ? byte_convert($status_tally['Uploaded']) : 'None';
+
+			// Create a row for the tally of statuses
+			if (count($status_tally) > 0) {
+
+				// Store list of k: v'ish values here
+				$tally_contents = array();
+
+				// Populate that
+				foreach ($status_tally as $state => $tally)
+					$tally_contents[] = "$state: $tally";
+
+				// Save this final row
+				$rows[] = array(
+					'type' => 'values',
+					'columns' => array(
+						array(8, implode('; ', $tally_contents))
 					)
 				);
 			}

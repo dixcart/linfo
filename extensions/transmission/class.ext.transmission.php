@@ -26,6 +26,10 @@ defined('IN_INFO') or exit;
  * Get status on transmission torrents
  */
 class ext_transmission implements LinfoExtension {
+
+	// Minimum version of Linfo required
+	const
+		LINFO_MIN_VERSION = '1.5';
 	
 	// Store these tucked away here
 	private
@@ -189,7 +193,7 @@ class ext_transmission implements LinfoExtension {
 				// Status count tally
 				$status_tally[$torrent['state']] = !array_key_exists($torrent['state'], $status_tally) ? 1 : $status_tally[$torrent['state']] + 1;
 
-				// Make some sense of the have so we can get it in real units
+				// Make some sense of the have so we can get it into bytes, which we can then have fun with
 				$have_bytes = false;
 				if ($torrent['have'] != 'None') {
 					$have_parts = explode(' ', $torrent['have'], 2);

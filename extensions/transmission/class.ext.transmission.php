@@ -29,7 +29,7 @@ class ext_transmission implements LinfoExtension {
 
 	// Minimum version of Linfo required
 	const
-		LINFO_MIN_VERSION = '1.5';
+		LINFO_MIN_VERSION = '1.6';
 	
 	// Store these tucked away here
 	private
@@ -119,8 +119,8 @@ class ext_transmission implements LinfoExtension {
 					'done' => $m[2], 
 					'have' => $m[3], 
 					'eta' => $m[4],
-					'up' => $m[5],
-					'down' => $m[6],
+					'up' => $m[5] * 1024, // always in KIB 
+					'down' => $m[6] * 1024, // ^
 					'ratio' => $m[7],
 					'state' => $m[8],
 					'torrent' => $m[9]
@@ -165,7 +165,8 @@ class ext_transmission implements LinfoExtension {
 				'Uploaded',
 				'Time Left',
 				'Ratio',
-				'Up/Down Speed'
+				'Up',
+				'Down'
 			)
 		);
 
@@ -174,7 +175,7 @@ class ext_transmission implements LinfoExtension {
 			$rows[] = array(
 				'type' => 'none',
 				'columns' => array(
-					array(8, 'None found')
+					array(9, 'None found')
 				)
 			);
 		}
@@ -186,6 +187,7 @@ class ext_transmission implements LinfoExtension {
 			// As well as uploaded/downloaded
 			$status_tally['Downloaded'] = 0;
 			$status_tally['Uploaded'] = 0;
+			$status_tally['Ratio'] = '';
 
 			// Go through each torrent
 			foreach ($this->_torrents as $torrent) {
@@ -244,12 +246,14 @@ class ext_transmission implements LinfoExtension {
 						$uploaded_bytes !== false ? byte_convert($uploaded_bytes) : 'None',
 						$torrent['eta'],
 						$torrent['ratio'],
-						$torrent['up'] . ' / '. $torrent['down'],
+						byte_convert($torrent['up']) . '/s',
+						byte_convert($torrent['down']) . '/s'
 					)
 				);
 			}
 
 			// Finish the size totals
+			$status_tally['Ratio'] = $status_tally['Downloaded'] > 0 && $status_tally['Uploaded'] > 0 ? round($status_tally['Uploaded'] / $status_tally['Downloaded'], 2) : 'N/A';
 			$status_tally['Downloaded'] = $status_tally['Downloaded'] > 0 ? byte_convert($status_tally['Downloaded']) : 'None';
 			$status_tally['Uploaded'] = $status_tally['Uploaded'] > 0 ? byte_convert($status_tally['Uploaded']) : 'None';
 
@@ -267,7 +271,7 @@ class ext_transmission implements LinfoExtension {
 				$rows[] = array(
 					'type' => 'values',
 					'columns' => array(
-						array(8, implode('; ', $tally_contents))
+						array(9, implode(', ', $tally_contents))
 					)
 				);
 			}

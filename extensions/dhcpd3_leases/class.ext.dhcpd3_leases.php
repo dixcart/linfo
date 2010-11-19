@@ -31,10 +31,6 @@ class ext_dhcpd3_leases implements LinfoExtension {
 	const
 		LINFO_MIN_VERSION = '1.5';
 	
-	// Where the file should be
-	const 
-		LEASES_FILE = '/var/lib/dhcp3/dhcpd.leases';
-
 	// How dates should look
 	const
 		DATE_FORMAT = 'm/d/y h:i A';
@@ -51,7 +47,15 @@ class ext_dhcpd3_leases implements LinfoExtension {
 	 * @access public
 	 */
 	public function __construct() {
+
+		// Localize error handler
 		$this->_LinfoError = LinfoError::Fledging();
+
+		// Find leases file
+		$this->_leases_file = locate_actual_path(array(
+			'/var/lib/dhcp3/dhcpd.leases',	// Linux usually
+			'/var/db/dhcpd/dhcpd.leases'	// FreeBSD and probably others
+		));
 	}
 
 	/**
@@ -63,8 +67,15 @@ class ext_dhcpd3_leases implements LinfoExtension {
 		// Time this
 		$t = new LinfoTimerStart('dhcpd3 leases extension');
 
+		// We couldn't find leases file?
+		if ($this->_leases_file === false) {
+			$this->_LinfoError->add('dhcpd3 releases extension: couldn\'t find leases file');
+			$this->_res = false;
+			return false;
+		}
+
 		// Get contents
-		$contents = getContents(self::LEASES_FILE, false);
+		$contents = getContents($this->_leases_file, false);
 
 		// Couldn't?
 		if ($contents === false) {

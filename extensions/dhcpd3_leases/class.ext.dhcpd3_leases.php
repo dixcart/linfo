@@ -34,6 +34,10 @@ class ext_dhcpd3_leases implements LinfoExtension {
 	// Where the file should be
 	const 
 		LEASES_FILE = '/var/lib/dhcp3/dhcpd.leases';
+
+	// How dates should look
+	const
+		DATE_FORMAT = 'm/d/y h:i A';
 	
 	// Store these tucked away here
 	private
@@ -69,16 +73,32 @@ class ext_dhcpd3_leases implements LinfoExtension {
 			return false;
 		}
 
+		// All dates in the file are in UTC format. Attempt finding out local time zone to convert UTC to local.
+		// This prevents confusing the hell out of people.
+		$do_date_conversion = false; 
+		$local_timezone = false;
+
+		// Make sure we have what we need. Stuff this requires doesn't exist on certain php installations
+		if (function_exists('date_default_timezone_get') && class_exists('DateTime') && class_exists('DateTimeZone')) {
+			// I only want this called once, hence value stored here. It also might fail
+			$local_timezone = @date_default_timezone_get(); 
+
+			// Make sure it didn't fail
+			if ($local_timezone !== false && is_string($local_timezone))
+				$do_date_conversion = true; // Say we'll allow conversion later on
+		}
+
 		// Get it into lines
 		$lines = explode("\n", $contents);
 		
 		// Store temp entries here
 		$curr = false;
 
-		// Each line
+		// Parse each line, while ignoring certain useless'ish values
+		// I'd do a single preg_match_all() using multiline regex, but the values in each lease block are inconsistent. :-/
 		for ($i = 0, $num_lines = count($lines); $i < $num_lines; $i++) {
 			
-			// Potential fixing
+			// Kill padding whitespace
 			$lines[$i] = trim($lines[$i]);
 
 			// Last line in entry
@@ -98,16 +118,49 @@ class ext_dhcpd3_leases implements LinfoExtension {
 
 			// Line with lease start
 			elseif ($curr && preg_match('/^starts \d+ (\d+\/\d+\/\d+ \d+:\d+:\d+);$/', $lines[$i], $m)) {
-				$curr['lease_start'] = $m[1];
+
+				// Get it in unix time stamp for prettier formatting later and easier tz offset conversion
+				$curr['lease_start'] = strtotime($m[1]);
+
+				// Handle offset conversion
+				if ($do_date_conversion) {
+					
+					// This handy class helps out with timezone offsets. Pass it original date, not unix timestamp
+					$d = new DateTime($m[1], new DateTimeZone($local_timezone));
+					$offset = $d->getOffset();
+
+					// If ofset looks good, deal with it
+					if (is_numeric($offset) && $offset != 0)
+						$curr['lease_start'] += $offset;
+				}
 			}
 			
 			// Line with lease end
 			elseif ($curr && preg_match('/^ends \d+ (\d+\/\d+\/\d+ \d+:\d+:\d+);$/', $lines[$i], $m)) {
-				$curr['lease_end'] = $m[1];
+
+				// Get it in unix time stamp for prettier formatting later and easier tz offset conversion
+				$curr['lease_end'] = strtotime($m[1]);
+
+				// Handle offset conversion
+				if ($do_date_conversion) {
+					
+					// This handy class helps out with timezone offsets. Pass it original date, not unix timestamp
+					$d = new DateTime($m[1], new DateTimeZone($local_timezone));
+					$offset = $d->getOffset();
+
+					// If ofset looks good, deal with it
+					if (is_numeric($offset) && $offset != 0)
+						$curr['lease_end'] += $offset;
+				}
 
 				// Is this old?
-				if (time() > strtotime($m[1])) {
+				// The file seems to contain all leases since the dhcpd server was started for the first time
+				if (time() > $curr['lease_end']) {
+
+					// Kill current entry and ignore any following parts of this lease 
 					$curr = false;
+
+					// Jump out right now
 					continue;
 				}
 			}
@@ -167,9 +220,13 @@ class ext_dhcpd3_leases implements LinfoExtension {
 				'columns' => array(
 					$this->_leases[$i]['ip'],
 					$this->_leases[$i]['mac'],
+
+					// Timezone is optional
 					array_key_exists('hostname', $this->_leases[$i]) ? $this->_leases[$i]['hostname'] : '<em>unknown</em>',
-					$this->_leases[$i]['lease_start'],
-					$this->_leases[$i]['lease_end']
+
+					// Format date prettily and hopefully localized to current timezone. 
+					date(self::DATE_FORMAT, $this->_leases[$i]['lease_start']),
+					date(self::DATE_FORMAT, $this->_leases[$i]['lease_end'])
 				)
 			);
 		

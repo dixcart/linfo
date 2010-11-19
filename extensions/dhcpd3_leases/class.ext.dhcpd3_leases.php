@@ -78,7 +78,7 @@ class ext_dhcpd3_leases implements LinfoExtension {
 		// Each line
 		for ($i = 0, $num_lines = count($lines); $i < $num_lines; $i++) {
 			
-			// Potential unfucking
+			// Potential fixing
 			$lines[$i] = trim($lines[$i]);
 
 			// Last line in entry
@@ -137,7 +137,7 @@ class ext_dhcpd3_leases implements LinfoExtension {
 	 * Return result
 	 * 
 	 * @access public
-	 * @return false on failure|array of the torrents
+	 * @return false on failure|array of the leases
 	 */
 	public function result() {
 		// Don't bother if it didn't go well

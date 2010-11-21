@@ -38,6 +38,7 @@ class ext_dhcpd3_leases implements LinfoExtension {
 	// Store these tucked away here
 	private
 		$_LinfoError,
+		$_hide_mac,
 		$_res,
 		$_leases = array();
 
@@ -48,13 +49,21 @@ class ext_dhcpd3_leases implements LinfoExtension {
 	 */
 	public function __construct() {
 
+		global $settings;
+
 		// Localize error handler
 		$this->_LinfoError = LinfoError::Fledging();
 
+		// Should we hide mac addresses, to prevent stuff like mac address spoofing?
+		$this->_hide_mac = array_key_exists('dhcpd3_hide_mac', $settings) ? (bool) $settings['dhcpd3_hide_mac'] : false;
+
 		// Find leases file
 		$this->_leases_file = locate_actual_path(array(
-			'/var/lib/dhcp3/dhcpd.leases',	// Linux usually
-			'/var/db/dhcpd/dhcpd.leases'	// FreeBSD and probably others
+			'/var/lib/dhcp3/dhcpd.leases',	// debian/ubuntu/others probably
+			'/var/lib/dhcpd/dhcpd.leases',	// Possibly redhatish distros and others
+			'/var/state/dhcp/dhcpd.leases',	// Arch linux, maybe others
+			'/var/db/dhcpd/dhcpd.leases',	// FreeBSD 
+			'/var/db/dhcpd.leases',		// OpenBSD/NetBSD/Darwin afaik
 		));
 	}
 
@@ -69,7 +78,7 @@ class ext_dhcpd3_leases implements LinfoExtension {
 
 		// We couldn't find leases file?
 		if ($this->_leases_file === false) {
-			$this->_LinfoError->add('dhcpd3 releases extension: couldn\'t find leases file');
+			$this->_LinfoError->add('dhcpd3 leases extension', 'couldn\'t find leases file');
 			$this->_res = false;
 			return false;
 		}
@@ -79,7 +88,7 @@ class ext_dhcpd3_leases implements LinfoExtension {
 
 		// Couldn't?
 		if ($contents === false) {
-			$this->_LinfoError->add('dhcpd3 releases extension: Error getting contents of leases file');
+			$this->_LinfoError->add('dhcpd3 leases extension', 'Error getting contents of leases file');
 			$this->_res = false;
 			return false;
 		}
@@ -177,7 +186,7 @@ class ext_dhcpd3_leases implements LinfoExtension {
 			}
 			
 			// Line with MAC address
-			elseif ($curr && preg_match('/^hardware ethernet (\w+:\w+:\w+:\w+:\w+:\w+);$/', $lines[$i], $m)) {
+			elseif (!$this->_hide_mac && $curr && preg_match('/^hardware ethernet (\w+:\w+:\w+:\w+:\w+:\w+);$/', $lines[$i], $m)) {
 				$curr['mac'] = $m[1];
 			}
 			
@@ -215,9 +224,20 @@ class ext_dhcpd3_leases implements LinfoExtension {
 		// Start showing connections
 		$rows[] = array(
 			'type' => 'header',
-			'columns' => array(
+			'columns' =>
+
+			// Not hiding mac address?
+			!$this->_hide_mac ? array(
 				'IP Address',
 				'MAC Address',
+				'Hostname',
+				'Lease Start',
+				'Lease End'
+			) :
+
+			// Hiding it indeed
+				array(
+				'IP Address',
 				'Hostname',
 				'Lease Start',
 				'Lease End'
@@ -228,14 +248,23 @@ class ext_dhcpd3_leases implements LinfoExtension {
 		for ($i = 0, $num_leases = count($this->_leases); $i < $num_leases; $i++)
 			$rows[] = array(
 				'type' => 'values',
-				'columns' => array(
+				'columns' =>
+				
+				// Not hiding mac addresses?
+				!$this->_hide_mac ? array(
 					$this->_leases[$i]['ip'],
 					$this->_leases[$i]['mac'],
+					array_key_exists('hostname', $this->_leases[$i]) ?
+						$this->_leases[$i]['hostname'] : '<em>unknown</em>',
+					date(self::DATE_FORMAT, $this->_leases[$i]['lease_start']),
+					date(self::DATE_FORMAT, $this->_leases[$i]['lease_end'])
+				):
 
-					// Timezone is optional
-					array_key_exists('hostname', $this->_leases[$i]) ? $this->_leases[$i]['hostname'] : '<em>unknown</em>',
-
-					// Format date prettily and hopefully localized to current timezone. 
+				// Hiding them indeed
+				array(
+					$this->_leases[$i]['ip'],
+					array_key_exists('hostname', $this->_leases[$i]) ?
+						$this->_leases[$i]['hostname'] : '<em>unknown</em>',
 					date(self::DATE_FORMAT, $this->_leases[$i]['lease_start']),
 					date(self::DATE_FORMAT, $this->_leases[$i]['lease_end'])
 				)

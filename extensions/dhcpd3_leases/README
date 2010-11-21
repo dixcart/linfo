@@ -5,3 +5,4 @@ Installation:
  - Copy/move the class.ext.dhcpd3_leases.php into the lib/ folder
  - The following lines must be added to your config.inc.php:
    $settings['extensions']['dhcpd3_leases'] = true; 
+   $settings['dhcpd3_hide_mac'] = true;  // set to false to show mac addresses

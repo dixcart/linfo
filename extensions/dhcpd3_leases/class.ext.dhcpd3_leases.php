@@ -63,7 +63,7 @@ class ext_dhcpd3_leases implements LinfoExtension {
 			'/var/lib/dhcpd/dhcpd.leases',	// Possibly redhatish distros and others
 			'/var/state/dhcp/dhcpd.leases',	// Arch linux, maybe others
 			'/var/db/dhcpd/dhcpd.leases',	// FreeBSD 
-			'/var/db/dhcpd.leases',		// OpenBSD/NetBSD/Darwin afaik
+			'/var/db/dhcpd.leases',		// OpenBSD/NetBSD/Darwin(lol)/DragonFLY afaik
 		));
 	}
 

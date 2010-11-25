@@ -113,19 +113,36 @@ class ext_transmission implements LinfoExtension {
 
 		// Match teh torrents!
 		if (preg_match_all('/^\s+(\d+)\*?\s+(\d+)\%\s+(\d+\.\d+ \w+|None)\s+(\w+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+|None)\s+(\w+)\s+(.+)$/m', $result, $matches, PREG_SET_ORDER) > 0) {
-			foreach ($matches as $m) {
-				$this->_torrents[] = array(
-					'id' => $m[1],
-					'done' => $m[2], 
-					'have' => $m[3], 
-					'eta' => $m[4],
-					'up' => $m[5] * 1024, // always in KIB 
-					'down' => $m[6] * 1024, // ^
-					'ratio' => $m[7],
-					'state' => $m[8],
-					'torrent' => $m[9]
+
+			// Use this to sort them
+			$sort_done = array();
+			$sort_ratio = array();
+			$sort_name = array();
+
+			// Save the matches
+			for($i = 0, $num = count($matches); $i < $num; $i++) {
+
+				// Save this one
+				$this->_torrents[$i] = array(
+					'id' => $matches[$i][1],
+					'done' => $matches[$i][2], 
+					'have' => $matches[$i][3], 
+					'eta' => $matches[$i][4],
+					'up' => $matches[$i][5] * 1024, // always in KIB 
+					'down' => $matches[$i][6] * 1024, // ^
+					'ratio' => $matches[$i][7],
+					'state' => $matches[$i][8],
+					'torrent' => $matches[$i][9]
 				);
+
+				// Use this for sorting
+				$sort_done[$i] = (int) $matches[$i][2];
+				$sort_ratio[$i] = (float) $matches[$i][7];
+				$sort_name[$i] = $matches[$i][9];
 			}
+
+			// Sort
+			array_multisort($sort_done, SORT_DESC, $sort_ratio, SORT_DESC, $sort_name, SORT_ASC, $this->_torrents);
 		}
 	}
 	

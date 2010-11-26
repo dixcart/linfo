@@ -112,7 +112,7 @@ class ext_transmission implements LinfoExtension {
 		}
 
 		// Match teh torrents!
-		if (preg_match_all('/^\s+(\d+)\*?\s+(\d+)\%\s+(\d+\.\d+ \w+|None)\s+(\w+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+|None)\s+(\w+)\s+(.+)$/m', $result, $matches, PREG_SET_ORDER) > 0) {
+		if (preg_match_all('/^\s+(\d+)\*?\s+(\d+)\%\s+(\d+\.\d+ \w+|None)\s+(\w+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+|None)\s+(Up & Down|Seeding|Idle|Stopped)\s+(.+)$/m', $result, $matches, PREG_SET_ORDER) > 0) {
 
 			// Use this to sort them
 			$sort_done = array();

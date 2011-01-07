@@ -1,0 +1,11 @@
+This lets you view the command output of the APC program apcaccess.
+
+Make sure that you have your UPS connected correctly, the apc package installed, and that
+running apcaccess produces output you find interesting enough for Linfo to display.
+
+Installation: 
+ - Copy/move the class.ext.apcaccess.php into the lib/ folder
+ - The following lines must be added to your config.inc.php:
+   $settings['extensions']['apcaccess'] = true; 
+
+

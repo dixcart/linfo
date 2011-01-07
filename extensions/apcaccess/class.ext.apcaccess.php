@@ -118,7 +118,7 @@ class ext_apcaccess implements LinfoExtension {
 			$this->_res['watts_used'] = $load * round($watts / 100);
 		}
 		else
-			$this->_res['watts_used'] = '?';
+			$this->_res['watts_used'] = false;
 
 		// Apparent success
 		return true;
@@ -150,7 +150,7 @@ class ext_apcaccess implements LinfoExtension {
 				'Battery Charge',
 				'Time Left',
 				'Current Load',
-				'Current Usage',
+				$this->_res['watts_used'] ? 'Current Usage' : false,
 				'Status'
 			)
 		);
@@ -165,7 +165,7 @@ class ext_apcaccess implements LinfoExtension {
 				$this->_res['charge'],
 				$this->_res['time_left'],
 				$this->_res['load'],
-				$this->_res['watts_used'] . 'W',
+				$this->_res['watts_used'] ? $this->_res['watts_used'] . 'W' : false,
 				$this->_res['status'],
 			)
 		);

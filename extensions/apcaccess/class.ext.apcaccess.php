@@ -96,7 +96,7 @@ class ext_apcaccess implements LinfoExtension {
 		
 		// Get status
 		if (preg_match('/^STATUS\s+:\s+([A-Z]+)/m', $result, $m))
-			$this->_res['status'] = ucfirst(strtolower($m[1]));
+			$this->_res['status'] = $m[1] == 'ONBATT' ? 'On Battery' : ucfirst(strtolower($m[1]));
 		
 		// Load percentage looking cool
 		if (preg_match('/^LOADPCT\s+:\s+(\d+\.\d+)/m', $result, $m)) {

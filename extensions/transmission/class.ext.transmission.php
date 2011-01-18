@@ -72,8 +72,8 @@ class ext_transmission implements LinfoExtension {
 		$t = new LinfoTimerStart('Transmission extension');
 
 		// Deal with stats, if possible 
-		if ($this->_folder && ($stats_contents = getContents($this->_folder.'stats.json')) && $stats_contents != false) {
-			$stats_vals = json_decode($stats_contents, true);
+		if ($this->_folder && ($stats_contents = getContents($this->_folder.'stats.json', false)) && $stats_contents != false) {
+			$stats_vals = @json_decode($stats_contents, true);
 			if (is_array($stats_vals))
 				$this->_stats = $stats_vals;
 		}
@@ -260,7 +260,7 @@ class ext_transmission implements LinfoExtension {
 				$rows[] = array(
 					'type' => 'values',
 					'columns' => array (
-						wordwrap($torrent['torrent'], 50, ' ', true),
+						wordwrap(htmlspecialchars($torrent['torrent']), 50, ' ', true),
 						'<div class="bar_chart">
 							<div class="bar_inner" style="width: '.(int) $torrent['done'].'%;">
 								<div class="bar_text">
@@ -317,7 +317,7 @@ class ext_transmission implements LinfoExtension {
 				'values' => array(
 					array('Total Downloaded', byte_convert($this->_stats['downloaded-bytes'])),
 					array('Total Uploaded', byte_convert($this->_stats['uploaded-bytes'])),
-					$this->_stats['uploaded-bytes'] > 0 && $this->_stats['downloaded-bytes'] > 0 ? array('Total Ratio', round($this->_stats['uploaded-bytes'] / $this->_stats['downloaded-bytes'], 2)) : false,
+					$this->_stats['uploaded-bytes'] > 0 && $this->_stats['downloaded-bytes'] > 0 ? array('Total Ratio', round($this->_stats['uploaded-bytes'] / $this->_stats['downloaded-bytes'], 3)) : false,
 					array('Duration', seconds_convert($this->_stats['seconds-active']))
 				)
 			);

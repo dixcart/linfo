@@ -14,3 +14,9 @@ Installation:
 	// 'port' => 9091		# uncomment to set a specific port
    ); 
 
+
+   // If you want download/upload/ratio/duration stats, make sure the web server user can
+   // read this folder, which is in the home directory of hteu ser that transmission is
+   // running is
+   $settings['transmission_folder'] = '/home/user/.config/transmission/';
+

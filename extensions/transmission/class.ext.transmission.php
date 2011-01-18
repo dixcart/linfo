@@ -37,6 +37,7 @@ class ext_transmission implements LinfoExtension {
 		$_LinfoError,
 		$_res,
 		$_torrents = array(),
+		$_stats = false,
 		$_auth,
 		$_host;
 
@@ -56,6 +57,9 @@ class ext_transmission implements LinfoExtension {
 		// Transmission specific settings
 		$this->_auth = array_key_exists('transmission_auth', $settings) ? (array) $settings['transmission_auth'] : array();
 		$this->_host = array_key_exists('transmission_host', $settings) ? (array) $settings['transmission_host'] : array();
+
+		// Path to home dir folder
+		$this->_folder = array_key_exists('transmission_folder', $settings) && is_dir($settings['transmission_folder']) && is_readable($settings['transmission_folder']) ? $settings['transmission_folder'] : false;
 	}
 
 	/**
@@ -66,6 +70,13 @@ class ext_transmission implements LinfoExtension {
 	private function _call () {
 		// Time this
 		$t = new LinfoTimerStart('Transmission extension');
+
+		// Deal with stats, if possible 
+		if ($this->_folder && ($stats_contents = getContents($this->_folder.'stats.json')) && $stats_contents != false) {
+			$stats_vals = json_decode($stats_contents, true);
+			if (is_array($stats_vals))
+				$this->_stats = $stats_vals;
+		}
 
 		// Deal with calling it
 		try {
@@ -293,11 +304,33 @@ class ext_transmission implements LinfoExtension {
 				);
 			}
 		}
+
+		// Handle stats which might not exist
+		if (
+			is_array($this->_stats) &&
+			array_key_exists('downloaded-bytes', $this->_stats) &&
+			array_key_exists('uploaded-bytes', $this->_stats) &&
+			array_key_exists('seconds-active', $this->_stats
+		)) {
+			$extra_vals = array(
+				'title' => 'Transmission Stats',
+				'values' => array(
+					array('Total Downloaded', byte_convert($this->_stats['downloaded-bytes'])),
+					array('Total Uploaded', byte_convert($this->_stats['uploaded-bytes'])),
+					$this->_stats['uploaded-bytes'] > 0 && $this->_stats['downloaded-bytes'] > 0 ? array('Total Ratio', round($this->_stats['uploaded-bytes'] / $this->_stats['downloaded-bytes'], 2)) : false,
+					array('Duration', seconds_convert($this->_stats['seconds-active']))
+				)
+			);
+		}
+		else
+			$extra_vals = false;
 		
 		// Give it off
 		return array(
 			'root_title' => 'Transmission Torrents',
-			'rows' => $rows
+			'rows' => $rows,
+			'extra_type' => 'k->v',
+			'extra_vals' => $extra_vals
 		);
 	}
 }

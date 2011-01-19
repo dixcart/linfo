@@ -153,10 +153,21 @@ class OS_Windows {
 			break;
 		}
 		
+		//page file
+		foreach ($this->wmi->ExecQuery("SELECT AllocatedBaseSize, CurrentUsage FROM Win32_PageFileUsage") as $pf) {
+			$swap_total = $pf->AllocatedBaseSize * 1024;
+			$swap_used = $pf->CurrentUsage * 1024;
+			break;
+		}
+		
+		$swap_free = $swap_total - $swap_used;
+		
 		return array(
 			'type'  => 'Physical',
 			'total' => $total_memory,
-			'free'  => $free_memory * 1024
+			'free'  => $free_memory * 1024,
+			'swapTotal' => $swap_total * 1024,
+			'swapFree' => $swap_free * 1024
 		);
 	}
 	

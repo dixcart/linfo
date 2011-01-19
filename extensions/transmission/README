@@ -17,6 +17,6 @@ Installation:
 
    // If you want download/upload/ratio/duration stats, make sure the web server user can
    // read this folder, which is in the home directory of hteu ser that transmission is
-   // running is
+   // running as
    $settings['transmission_folder'] = '/home/user/.config/transmission/';
 

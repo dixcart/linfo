@@ -147,35 +147,16 @@ else {
 			else 
 				exit('Cannot generate XML. Install either php\'s SimpleXML or XMLWriter extension');
 		break;
-	}
+
+		//Pingdom output
+		case 'pingdom':
+			if (array_key_exists('param', $_GET)) {
+				$param = $_GET['param'];
+				showInfoPingdom($info, $settings, $param);
+			} else {
+				echo ('no param supplied');
+			}
+		break;
+    }
 }
 // "This is where it ends, Commander"
-
-
-
-
-
-
-
-
-/*
-	Roses are red; violets are blue; vaginas are nice and
-	sometimes you are too! 
-
-	Once upton a time, there was a sex machine named Billie. Her
-	counterpart was named Linus. Her cunt was lined with sweet
-	oil to ease his passing, Linus so loved her cunt. At one
-	point, their liquid metal condom broke and they conceived a
-	child. They named it "pinpho" after the broken condom.
-
-	Out it came, not much more than a sandisk flash drive. They
-	inserted it where the sun shouldn't shine; it had a lone
-	ext2 partition consisting of a single file:
-	linfo_0.1.tar.gz.
-
-	Thus Linfo was born.
-
-						--
-						The book of Metal
-						cocks, 93:69
-*/

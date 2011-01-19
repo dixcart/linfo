@@ -1098,3 +1098,44 @@ function showInfoHTML($info, $settings) {
 	// Send it all out
 	ob_end_flush();
  }
+
+ /**
+ * Show a response in the format that Pingdom expects
+ * Requires a 'param' querystring as pingdom only supports
+ * one thing at a time
+ * @param array $info the system information
+ * @param array $settings linfo settings
+ * @param string $param which parameter to show
+ */
+function showInfoPingdom($info, $settings, $param) {
+	
+	$status = "OK";
+	$response = 0;
+	
+	switch ($param) {
+		default:
+			$status = "not OK";
+			$response = 0;
+			break;
+		case "load":
+			$response = str_replace('%', '', $info['Load']);
+			break;
+		case "swap-used":
+			$response = round(($info['RAM']['swapTotal'] - $info['RAM']['swapFree']) / (1024 * 1024), 0); //in MB
+			break;
+		case "ram-used":
+			$response = round(($info['RAM']['total'] - $info['RAM']['free']) / (1024 * 1024), 0);
+			break;
+	}
+	
+	//create xml
+	$xml = new SimpleXMLElement('<?xml version="1.0"?><pingdom_http_custom_check></pingdom_http_custom_check>');
+	
+	//put in our vars
+	$status_elem = $xml->addChild('status', $status);
+	$response_elem = $xml->addChild('response_time', $response);
+	
+	// Out it
+	header('Content-type: text/xml');
+	echo $xml->asXML();
+}

@@ -25,7 +25,6 @@ defined('IN_INFO') or exit;
 
 /**
  * Get info on Windows systems
- * Uses the wmic WMI command line client
  * Written and maintained by Oliver Kuckertz (mologie).
  */
 class OS_Windows {
@@ -71,6 +70,7 @@ class OS_Windows {
 		return array(
 			'OS' => empty($this->settings['show']['os']) ? '' : $this->getOS(),
 			'Kernel' => empty($this->settings['show']['kernel']) ? '' : $this->getKernel(),
+			'Distro' => empty($this->settings['show']['distro']) ? '' : $this->getDistro(),
 			'RAM' => empty($this->settings['show']['ram']) ? array() : $this->getRam(),
 			'HD' => empty($this->settings['show']['hd']) ? '' : $this->getHD(),
 			'Mounts' => empty($this->settings['show']['mounts']) ? array() : $this->getMounts(),
@@ -78,6 +78,7 @@ class OS_Windows {
 			'HostName' => empty($this->settings['show']['hostname']) ? '' : $this->getHostName(),
 			'UpTime' => empty($this->settings['show']['uptime']) ? '' : $this->getUpTime(),
 			'CPU' => empty($this->settings['show']['cpu']) ? array() : $this->getCPU(),
+			'CPUArchitecture' => empty($this->settings['show']['cpu']) ? array() : $this->getCPUArchitecture(),
 			'Network Devices' => empty($this->settings['show']['network']) ? array() : $this->getNet(),
 			'Devices' => empty($this->settings['show']['devices']) ? array() : $this->getDevs(),
 			'Temps' => empty($this->settings['show']['temps']) ? array(): $this->getTemps(),
@@ -85,7 +86,8 @@ class OS_Windows {
 			'Raid' => empty($this->settings['show']['raid']) ? array(): $this->getRAID(),
 			'Wifi' => empty($this->settings['show']['wifi']) ? array(): $this->getWifi(),
 			'SoundCards' => empty($this->settings['show']['sound']) ? array(): $this->getSoundCards(),
-			'processStats' => empty($this->settings['show']['process_stats']) ? array() : $this->getProcessStats()
+			'processStats' => empty($this->settings['show']['process_stats']) ? array() : $this->getProcessStats(),
+			'services' => empty($this->settings['show']['process_stats']) ? array() : $this->getServices()
 		);
 	}
 	
@@ -100,7 +102,8 @@ class OS_Windows {
 		foreach ($this->wmi->ExecQuery("SELECT Caption FROM Win32_OperatingSystem") as $os) {
 			return $os->Caption;
 		}
-		return "Unknown";
+		
+		return "Windows";
 	}
 	
 	/**
@@ -111,10 +114,15 @@ class OS_Windows {
 	 */
 	private function getKernel() {
 	
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Kernel');
+		
 		foreach ($this->wmi->ExecQuery("SELECT WindowsVersion FROM Win32_Process WHERE Handle = 0") as $process) {
 			$this->windows_version = $process->WindowsVersion;
 			return $process->WindowsVersion;
 		}
+		
 		return "Unknown";
 	}
 	
@@ -126,9 +134,14 @@ class OS_Windows {
 	 */
 	private function getHostName() {
 		
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Hostname');
+		
 		foreach ($this->wmi->ExecQuery("SELECT Name FROM Win32_ComputerSystem") as $cs) {
 			return $cs->Name;
 		}
+		
 		return "Unknown";
 	}
 	
@@ -139,6 +152,10 @@ class OS_Windows {
 	 * @return array the memory information
 	 */
 	private function getRam(){
+		
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Memory');
 		
 		$total_memory = 0;
 		$free_memory = 0;
@@ -179,6 +196,10 @@ class OS_Windows {
 	 */
 	private function getCPU() {
 		
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('CPUs');
+		
 		$cpus = array();
 		$alt = false;
 		$object = $this->wmi->ExecQuery("SELECT Name, Manufacturer, CurrentClockSpeed, NumberOfLogicalProcessors FROM Win32_Processor");
@@ -215,6 +236,10 @@ class OS_Windows {
 	 */
 	private function getUpTime () {
 		
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Uptime');
+		
 		$booted_str = "";
 		
 		foreach ($this->wmi->ExecQuery("SELECT LastBootUpTime FROM Win32_OperatingSystem") as $os) {
@@ -243,6 +268,10 @@ class OS_Windows {
 	 */
 	private function getHD() {
 		
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Drives');
+		
 		$drives = array();
 		$partitions = array();
 		
@@ -254,9 +283,10 @@ class OS_Windows {
 		}
 		
 		foreach ($this->wmi->ExecQuery("SELECT Caption, DeviceID, Index, Size FROM Win32_DiskDrive") as $drive) {
+			$caption = explode(" ", $drive->Caption);
 			$drives[] = array(
-				'name'   =>  $drive->Caption,
-				'vendor' => reset(explode(" ", $drive->Caption)),
+				'name'   => $drive->Caption,
+				'vendor' => reset($caption),
 				'device' => $drive->DeviceID,
 				'reads'  => false,
 				'writes' => false,
@@ -277,6 +307,12 @@ class OS_Windows {
 	 * @return array the temps
 	 */
 	private function getTemps() {
+	
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Temperature');
+		
+		return array(); // TODO
 	}
 	
 	/**
@@ -286,6 +322,10 @@ class OS_Windows {
 	 * @return array the mounted the file systems
 	 */
 	private function getMounts() {
+		
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Mounted file systems');
 		
 		$volumes = array();
 		
@@ -370,16 +410,27 @@ class OS_Windows {
 	 */
 	private function getDevs() {
 		
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Hardware Devices');
+		
 		$devs = array();
 		
 		foreach($this->wmi->ExecQuery("SELECT DeviceID, Caption, Manufacturer FROM Win32_PnPEntity") as $pnpdev) {
-			$type = reset(explode("\\", $pnpdev->DeviceID));
+			$devId = explode("\\", $pnpdev->DeviceID);
+			$type = reset($devId);
 			if (($type != 'USB' && $type != 'PCI') || (empty($pnpdev->Caption) || $pnpdev->Manufacturer[0] == '(')) {
 				continue;
 			}
+			$manufacturer = $pnpdev->Manufacturer;
+			$caption = $pnpdev->Caption;
+			if (function_exists('iconv')) {
+				$manufacturer = iconv("Windows-1252", "UTF-8//TRANSLIT", $manufacturer);
+				$caption = iconv("Windows-1252", "UTF-8//TRANSLIT", $caption);
+			}
 			$devs[] = array(
-				'vendor' => $pnpdev->Manufacturer,
-				'device' => $pnpdev->Caption,
+				'vendor' => $manufacturer,
+				'device' => $caption,
 				'type' => $type
 			);
 		}
@@ -397,6 +448,12 @@ class OS_Windows {
 	 * @return array of raid arrays
 	 */
 	private function getRAID() {
+	
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('RAID');
+	
+		return array();
 	}
 	
 	/**
@@ -406,12 +463,16 @@ class OS_Windows {
 	 * @return array of current system load values
 	 */
 	private function getLoad() {
+	
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Load Averages');
 		
 		$load = array();
 		foreach ($this->wmi->ExecQuery("SELECT LoadPercentage FROM Win32_Processor") as $cpu) {
 			$load[] = $cpu->LoadPercentage;
 		}
-		return (array_sum($load) / count($load)) . "%";
+		return round(array_sum($load) / count($load), 2) . "%";
 	}
 	
 	/**
@@ -422,6 +483,10 @@ class OS_Windows {
 	 */
 	private function getNet() {
 	
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Network Devices');
+		
 		$return = array();
 		$i = 0;
 		
@@ -430,7 +495,6 @@ class OS_Windows {
 		} else {
 			$object = $this->wmi->ExecQuery("SELECT AdapterType, Name, NetConnectionStatus FROM Win32_NetworkAdapter WHERE NetConnectionStatus != NULL");
 		}
-		
 		
 		foreach ($object as $net) {
 			// Save and get info for each
@@ -526,6 +590,12 @@ class OS_Windows {
 	 * @return array of battery status
 	 */
 	private function getBattery() {
+	
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Batteries');
+		
+		return array(); // TODO
 	}
 	
 	/**
@@ -535,6 +605,10 @@ class OS_Windows {
 	 * @return array of wifi devices
 	 */
 	private function getWifi() {
+	
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Wifi');
 	}
 	
 	/**
@@ -545,14 +619,24 @@ class OS_Windows {
 	 */
 	private function getSoundCards() {
 		
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Sound cards');
+		
 		$cards = array();
-		$i = 0;
+		$i = 1;
 		
 		foreach ($this->wmi->ExecQuery("SELECT Caption, Manufacturer FROM Win32_SoundDevice") as $card) {
+			$manufacturer = $card->Manufacturer;
+			$caption = $card->Caption;
+			if (function_exists('iconv')) {
+				$manufacturer = iconv("Windows-1252", "UTF-8//TRANSLIT", $manufacturer);
+				$caption = iconv("Windows-1252", "UTF-8//TRANSLIT", $caption);
+			}
 			$cards[] = array(
 				'number' => $i,
-				'vendor' => $card->Manufacturer,
-				'card' => $card->Caption
+				'vendor' => $manufacturer,
+				'card' => $caption
 			);
 			$i++;
 		}
@@ -568,6 +652,10 @@ class OS_Windows {
 	 */
 	private function getProcessStats() {
 		
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('Process Stats');
+		
 		$result = array(
 			'exists' => true,
 			'proc_total' => 0,
@@ -579,8 +667,61 @@ class OS_Windows {
 			$result['proc_total']++;
 		}
 		
-		
 		return $result;
+	}
+	
+	/**
+	 * getServices 
+	 * 
+	 * @access private
+	 * @return array the services
+	 */
+	private function getServices() {
+	
+		return array(); // TODO
+	}
+	
+	/**
+	 * getDistro
+	 * 
+	 * @access private
+	 * @return array the distro,version or false
+	 */
+	private function getDistro() {
+	
+		return false;
+	}
+	
+	/**
+	 * getCPUArchitecture
+	 * 
+	 * @access private
+	 * @return string the arch and bits
+	 */
+	private function getCPUArchitecture() {
+	
+		// Time?
+		if (!empty($this->settings['timer']))
+			$t = new LinfoTimerStart('CPU architecture');
+		
+		foreach($this->wmi->ExecQuery("SELECT Architecture FROM Win32_Processor") as $cpu) {
+			switch($cpu->Architecture) {
+				case 0:
+					return "x86";
+				case 1:
+					return "MIPS";
+				case 2:
+					return "Alpha";
+				case 3:
+					return "PowerPC";
+				case 6:
+					return "Itanium-based systems";
+				case 9:
+					return "x64";
+			}
+		}
+		
+		return "Unknown";
 	}
 	
 	/**

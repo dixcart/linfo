@@ -1,36 +1,9 @@
 <?php
 
-/**
- * This file is part of Linfo (c) 2010 Joseph Gillotti.
- * 
- * Linfo is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * Linfo is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with Linfo.  If not, see <http://www.gnu.org/licenses/>.
-*/
 
-/**
- * Keep out hackers...
- */
-defined('IN_INFO') or exit;
-
-/**
- * Get info on a usual linux system
- * Works by exclusively looking around /proc and /sys
- * Totally ignores CallExt class, very deliberately
- * Also deliberately ignores trying to find out the distro. 
- */
-class OS_Linux {
-
-	// Keep these tucked away
+class OS_CYGWIN {
+	
+// Keep these tucked away
 	protected
 		$settings, $error;
 
@@ -49,8 +22,8 @@ class OS_Linux {
 		$this->error = LinfoError::Fledging();
 
 		// Make sure we have what we need
-		if (!is_dir('/sys') || !is_dir('/proc'))
-			throw new GetInfoException('This needs access to /proc and /sys to work.');
+		if (!is_dir('/proc'))
+			throw new GetInfoException('This needs access to /proc to work.');
 	}
 
 	/**
@@ -65,7 +38,6 @@ class OS_Linux {
 		return array(
 			'OS' => empty($this->settings['show']['os']) ? '' : $this->getOS(),
 			'Kernel' => empty($this->settings['show']['kernel']) ? '' : $this->getKernel(),
-			'Distro' => empty($this->settings['show']['distro']) ? '' : $this->getDistro(),
 			'RAM' => empty($this->settings['show']['ram']) ? array() : $this->getRam(),
 			'HD' => empty($this->settings['show']['hd']) ? '' : $this->getHD(),
 			'Mounts' => empty($this->settings['show']['mounts']) ? array() : $this->getMounts(),
@@ -74,13 +46,6 @@ class OS_Linux {
 			'UpTime' => empty($this->settings['show']['uptime']) ? '' : $this->getUpTime(),
 			'CPU' => empty($this->settings['show']['cpu']) ? array() : $this->getCPU(),
 			'CPUArchitecture' => empty($this->settings['show']['cpu']) ? array() : $this->getCPUArchitecture(),
-			'Network Devices' => empty($this->settings['show']['network']) ? array() : $this->getNet(),
-			'Devices' => empty($this->settings['show']['devices']) ? array() : $this->getDevs(),
-			'Temps' => empty($this->settings['show']['temps']) ? array(): $this->getTemps(),
-			'Battery' => empty($this->settings['show']['battery']) ? array(): $this->getBattery(),
-			'Raid' => empty($this->settings['show']['raid']) ? array(): $this->getRAID(),
-			'Wifi' => empty($this->settings['show']['wifi']) ? array(): $this->getWifi(),
-			'SoundCards' => empty($this->settings['show']['sound']) ? array(): $this->getSoundCards(),
 			'processStats' => empty($this->settings['show']['process_stats']) ? array() : $this->getProcessStats(),
 			'services' => empty($this->settings['show']['process_stats']) ? array() : $this->getServices()
 		);
@@ -95,7 +60,7 @@ class OS_Linux {
 	private function getOS() {
 		
 		// Linux, obviously
-		return 'Linux';
+		return 'Cygwin';
 	}
 
 	/**
@@ -122,14 +87,8 @@ class OS_Linux {
 		// Get it
 		$contents = getContents($file);
 
-		// Parse it
-		if (preg_match('/^Linux version (\S+).+$/', $contents, $match) != 1) {
-			$this->error->add('Linfo Core', 'Error parsing /proc/version');
-			return 'Unknown';
-		}
-
 		// Return it
-		return $match[1];
+		return $contents;
 	}
 
 	/**
@@ -139,27 +98,7 @@ class OS_Linux {
 	 * @return string the host name
 	 */
 	private function getHostName() {
-		
-		// Time?
-		if (!empty($this->settings['timer']))
-			$t = new LinfoTimerStart('Hostname');
-
-		// File containing info
-		$file = '/proc/sys/kernel/hostname';
-		
-		// Get it
-		$hostname = getContents($file, false);
-
-		// Failed?
-		if ($hostname === false) {
-			$this->error->add('Linfo Core', 'Error getting /proc/sys/kernel/hostname');
-			return 'Unknown';
-		}
-		else {
-
-			// Didn't fail; return it
-			return $hostname;
-		}
+		return php_uname('n');
 	}
 
 	/**
@@ -881,9 +820,10 @@ class OS_Linux {
 			$type_contents = strtoupper(getContents($path.'/device/modalias'));
 			list($type) = explode(':', $type_contents, 2);
 			$type = $type != 'USB' && $type != 'PCI' ? 'N/A' : $type;
+			
 
 			// Save and get info for each
-			$return[basename($path)] = array(
+			$return[end(explode('/', $path))] = array(
 
 				// Stats are stored in simple files just containing the number
 				'recieved' => array(
@@ -1276,7 +1216,7 @@ class OS_Linux {
 			array('/etc/redhat-release', '/^CentOS release ([\d\.]+) \(([^)]+)\)$/', 'CentOS'),
 			array('/etc/redhat-release', '/^Red Hat.+release (\S+) \(([^)]+)\)$/', 'RedHat'),
 			array('/etc/fedora-release', '/^Fedora(?: Core)? release (\d+) \(([^)]+)\)$/', 'Fedora'),
-			array('/etc/gentoo-release', '/([\d\.]+)$/', 'Gentoo'),
+			array('/etc/gentoo-release', '([\d\.]+)$/', 'Gentoo'),
 			array('/etc/SuSE-release', '/^VERSION = ([\d\.]+)$/m', 'openSUSE'),
 			array('/etc/slackware-version', '/([\d\.]+)$/', 'Slackware'),
 
@@ -1360,4 +1300,5 @@ class OS_Linux {
 	private function getCPUArchitecture() {
 		return php_uname('m');
 	}
+
 }

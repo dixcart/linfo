@@ -114,7 +114,7 @@ class ext_smb implements LinfoExtension {
 			}
 
 			// A locked file?
-			elseif($current_location == 'f' && preg_match('/^(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+([A-Z]+)\s+([A-Z]+)\s+(\S+)\s+(\S+)\s+([a-zA-Z]+ [a-zA-Z]+ \d+ \d+:\d+:\d+ \d+)$/', $lines[$i], $file_match)) {
+			elseif($current_location == 'f' && preg_match('/^(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+([A-Z]+)\s+([A-Z]+)\s+(\S+)\s+(.+)\s+([a-zA-Z]+ [a-zA-Z]+ \d+ \d+:\d+:\d+ \d+)$/', $lines[$i], $file_match)) {
 				
 				$files[] = array(
 					'pid' => $file_match[1],

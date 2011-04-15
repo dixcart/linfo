@@ -35,7 +35,8 @@ class OS_FreeBSD extends OS_BSD_Common{
 		$settings,
 		$exec,
 		$error,
-		$dmesg;
+		$dmesg,
+		$version;
 
 	// Start us off
 	public function __construct($settings) {
@@ -61,6 +62,12 @@ class OS_FreeBSD extends OS_BSD_Common{
 			'hw.ncpu',
 			'hw.clockrate'
 		), false);
+
+		// Save version
+		if (preg_match('/^([\d\.]+)/', php_uname('r'), $vm) != 0)
+			$this->version = (float) $vm[1];
+		
+	//	var_dump($this->version); exit;
 	}
 	
 	// This function will likely be shared among all the info classes
@@ -87,7 +94,6 @@ class OS_FreeBSD extends OS_BSD_Common{
 
 			// Columns we should leave out. (because finding them out is either impossible or requires root access)
 			'contains' => array(
-				'hw_vendor' => false,
 				'drives_rw_stats' => false
 			)
 		);
@@ -369,7 +375,6 @@ class OS_FreeBSD extends OS_BSD_Common{
 		$return = array();
 		
 		// Use netstat to get info
-		// TODO: This is reallllyyyy slow. Alternative?
 		try {
 			$netstat = $this->exec->exec('netstat', '-nbdi');
 		}
@@ -450,15 +455,16 @@ class OS_FreeBSD extends OS_BSD_Common{
 
 			// Save info
 			$return[$net[1]] = array(
+
 				
 				// These came from netstat
 				'recieved' => array(
-					'bytes' => $net[4],
+					'bytes' => (int) $net[$this->version >= 8 ? 5 : 4],
 					'errors' => $net[3],
 					'packets' => $net[2] 
 				),
 				'sent' => array(
-					'bytes' => $net[7],
+					'bytes' => (int)$net[$this->version >= 8 ? 8 : 7],
 					'errors' =>  $net[6],
 					'packets' => $net[5] 
 				),
@@ -538,38 +544,10 @@ class OS_FreeBSD extends OS_BSD_Common{
 		if (!empty($this->settings['timer']))
 			$t = new LinfoTimerStart('Hardware Devices');
 		
-		// Get all devices detected during boot
-		if (preg_match_all('/^(\w+\d+): <(.+)>.* on (\w+)\d+$/m', $this->dmesg, $m, PREG_SET_ORDER) == 0)
-			return array();
-
-		// Keep them here
-		$devices = array();
-
-		// Store the type column for each key
-		$sort_type = array();
-		
-		// Stuff it
-		foreach ($m as $device) {
-
-			// Only call this once
-			$type = strtoupper($device[3]);
-
-			// Stuff entry
-			$devices[] = array(
-				'vendor' => false, // Maybe todo? 
-				'device' => $device[2],
-				'type' => $type
-			);
-
-			// For the sorting of this entry
-			$sort_type[] = $type;
-		}
-		
-		// Sort
-		array_multisort($devices, SORT_STRING, $sort_type);
-
-		// Return
-		return $devices;
+		// Class that does it
+		$hw = new HW_IDS($usb_ids, '/usr/share/misc/pci_vendors');
+		$hw->work('freebsd');
+		return $hw->result();
 	}
 		
 	// APM? Seems to only support either one battery of them all collectively
